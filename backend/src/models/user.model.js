@@ -29,3 +29,15 @@ export const verifyUser = async (userId) => {
     const [result] = await db.query(query, [userId]);
     return result;
 };
+
+export const findUserById = async (id) => {
+
+    const query = `
+        SELECT * FROM users
+        WHERE id = ?
+    `;
+
+    const [rows] = await db.query(query, [id]);
+
+    return rows[0];
+};

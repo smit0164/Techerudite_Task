@@ -176,7 +176,8 @@ export const verifyEmail = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: "Email verified successfully"
+            message: "Email verified successfully",
+            role:user.role
         });
 
     } catch (error) {
@@ -238,7 +239,7 @@ export const adminLogin = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: "Admin login successful",
-            token
+            user
         });
 
     } catch (error) {
@@ -279,6 +280,84 @@ export const adminProfile = async (req,res) => {
 
     } catch (error) {
         console.log(error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error"
+        });
+    }
+};
+
+export const customerLogin = async(req,res)=>{
+    try {
+        const {email,password} = req.body;
+        // validation
+        if (!email || !password) {
+            return res.status(400).json({
+                success: false,
+                message: "Email and password are required"
+            });
+        }
+        // find user
+        const user = await findUserByEmail(email);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "Invalid credentials"
+            });
+        }
+        // check role
+        if (user.role !== "customer") {
+            return res.status(403).json({
+                success: false,
+                message:"You are not allowed to login from here"
+            });
+        }
+        // check verification
+        if (!user.is_verified) {
+            return res.status(403).json({
+                success: false,
+                message:"Please verify your email first"
+            });
+        }
+
+        // compare password
+        const isMatch = await bcrypt.compare(password,user.password);
+        if (!isMatch) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid credentials"
+            });
+        }
+        // generate jwt token
+        const token = jwt.sign({id: user.id,role: user.role},process.env.JWT_SECRET,{expiresIn: "7d"});
+        res.cookie('token',token);
+        return res.status(200).json({
+            success: true,
+            message: "Customer login successful",
+            user
+        });
+
+    } catch (error) {
+
+        console.log(error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error"
+        });
+    }
+}
+
+export const logoutUser = async (req,res) => {
+    try {
+        res.clearCookie("token");
+        return res.status(200).json({
+            success: true,
+            message: "Logged out successfully"
+        });
+
+    } catch (error) {
+
         return res.status(500).json({
             success: false,
             message: "Internal Server Error"
